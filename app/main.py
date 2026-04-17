@@ -94,7 +94,7 @@ async def lifespan(app: FastAPI) -> Any:
                 await outbox_task
 
         if broker is not None:
-            await broker.close()
+            await broker.stop()
 
 
 # Fastapi. Запускаем приложение.
