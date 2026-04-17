@@ -60,7 +60,7 @@ async def setup_topology() -> None:
 
 app = FastStream(
     broker,
-    on_startup=[setup_topology],
+    after_startup=[setup_topology],
 )
 
 
