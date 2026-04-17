@@ -247,6 +247,7 @@ report.xml
 
 # LLM
 CLAUDE.md
+AGENTS.md
 .claude
 claude_code_zai_env.sh
 MCP_RUNBOOK.md
