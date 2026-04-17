@@ -5,16 +5,21 @@ from faststream.rabbit import QueueType
 from faststream.rabbit import RabbitBroker
 from faststream.rabbit import RabbitExchange
 from faststream.rabbit import RabbitQueue
+from loguru import logger
 
 from app.config import config
 from app.consumer.schemas import PaymentCreatedEventSchema
 from app.consumer.services import PaymentConsumerService
 from app.consumer.services import PaymentGatewaySimulator
+from app.consumer.services import WebhookDeliveryError
 from app.consumer.services import WebhookSender
 from app.db.dao.payment_dao import PaymentDAO
 from app.db.session import get_session_maker
+from app.utils.logger_setup import LoggerSetup
 
-broker = RabbitBroker(config.get_rabbit_url())
+LoggerSetup.configure_logging()
+
+broker = RabbitBroker(config.get_rabbit_url(), logger=logger)
 
 PAYMENTS_EXCHANGE = RabbitExchange(
     name=config.rabbit.exchange_name,
@@ -60,6 +65,7 @@ async def setup_topology() -> None:
 
 app = FastStream(
     broker,
+    logger=logger,
     after_startup=[setup_topology],
 )
 
@@ -78,4 +84,13 @@ async def process_new_payment(event: PaymentCreatedEventSchema) -> None:
             payment_gateway=gateway_simulator,
             webhook_sender=webhook_sender,
         )
-        await service.process(event=event)
+        try:
+            await service.process(event=event)
+        except WebhookDeliveryError as exc:
+            logger.error(
+                'Webhook delivery failed for payment_id={} idempotency_key={}: {}',
+                event.payment_id,
+                event.idempotency_key,
+                exc,
+            )
+            raise RuntimeError(str(exc)) from None

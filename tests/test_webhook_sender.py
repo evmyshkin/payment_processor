@@ -67,12 +67,13 @@ async def test_webhook_sender_raises_after_last_attempt() -> None:
         sleep_func=sleep_func,
     )
 
-    with pytest.raises(WebhookDeliveryError):
+    with pytest.raises(WebhookDeliveryError) as exc_info:
         await sender.send_with_retry(
             webhook_url='https://example.com/hook',
             payload={'status': 'ok'},
         )
 
+    assert exc_info.value.__cause__ is None
     assert post_func.await_count == 3
     assert sleep_func.await_args_list[0].args[0] == 1.0
     assert sleep_func.await_args_list[1].args[0] == 2.0

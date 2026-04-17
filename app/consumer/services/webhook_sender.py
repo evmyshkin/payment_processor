@@ -6,6 +6,8 @@ from typing import Any
 
 import httpx
 
+from loguru import logger
+
 type WebhookPostFunc = Callable[[str, dict[str, Any], float], Awaitable[None]]
 
 
@@ -45,10 +47,17 @@ class WebhookSender:
                 await self._post_func(webhook_url, payload, self._timeout_seconds)
                 return
             except Exception as exc:
+                logger.warning(
+                    'Webhook attempt failed for url={} attempt={}/{} error={}',
+                    webhook_url,
+                    attempt,
+                    self._max_attempts,
+                    exc,
+                )
                 if attempt == self._max_attempts:
                     raise WebhookDeliveryError(
                         f'Webhook delivery failed after {self._max_attempts} attempts.',
-                    ) from exc
+                    ) from None
 
                 delay = self._retry_backoff_base_seconds * (2 ** (attempt - 1))
                 await self._sleep_func(delay)

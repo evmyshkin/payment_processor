@@ -28,8 +28,12 @@ class LoggerSetup:
         """
         _exc, _exc_value, _tb = record['exception'] or (None, None, None)
 
+        level_name = record['level'].name
+        if level_name.startswith('Level '):
+            level_name = logging.getLevelName(record['level'].no)
+
         subset = {
-            'level': record['level'].name,
+            'level': level_name,
             'message': record['message'],
             'datetime_utc': datetime.now(tz=UTC).strftime('%d.%m.%Y, %H:%M:%S'),
             'timestamp': record['time'].timestamp(),
