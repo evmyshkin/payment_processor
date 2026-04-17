@@ -1,16 +1,18 @@
 # Локальная разработка
 dev:
-	uvicorn app.main:fastapi_app --host 127.0.0.1 --port "8000" --reload
+	uv run uvicorn app.main:fastapi_app --host 127.0.0.1 --port "8000" --reload
 consumer:
 	uv run faststream run app.consumer.main:app
 migrate:
-	alembic upgrade head
+	uv run alembic upgrade head
 migrate-down:
-	alembic downgrade -1
+	uv run alembic downgrade -1
 
 # Docker разработка
 db:
 	docker compose up --build db -d
+broker:
+	docker compose up --build rabbitmq -d
 up:
 	docker compose up --build -d
 up-stack:
