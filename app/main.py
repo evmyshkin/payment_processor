@@ -36,7 +36,7 @@ async def run_outbox_dispatcher_loop(
         except asyncio.CancelledError:
             raise
         except SQLAlchemyError:
-            logger.exception('Outbox dispatcher iteration failed.')
+            logger.exception('Ошибка итерации диспетчера outbox.')
 
         await asyncio.sleep(max(poll_interval_seconds, 0.1))
 
@@ -75,13 +75,15 @@ async def lifespan(app: FastAPI) -> Any:
                 name='outbox-dispatcher',
             )
         except AMQPError:
-            logger.exception('Failed to start outbox dispatcher.')
+            logger.exception('Не удалось запустить диспетчер outbox.')
             broker = None
         except OSError:
-            logger.exception('Failed to start outbox dispatcher.')
+            logger.exception('Не удалось запустить диспетчер outbox.')
             broker = None
     else:
-        logger.warning('Outbox dispatcher is disabled: set OUTBOX__ENABLED=true and DB config to enable it.')
+        logger.warning(
+            'Диспетчер outbox отключен: установите OUTBOX__ENABLED=true и задайте настройки БД для включения.'
+        )
 
     try:
         yield

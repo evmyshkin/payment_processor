@@ -48,7 +48,7 @@ class WebhookSender:
                 return
             except Exception as exc:
                 logger.warning(
-                    'Webhook attempt failed for url={} attempt={}/{} error={}',
+                    'Неудачная попытка отправки webhook: url={} попытка={}/{} ошибка={}',
                     webhook_url,
                     attempt,
                     self._max_attempts,
@@ -56,7 +56,7 @@ class WebhookSender:
                 )
                 if attempt == self._max_attempts:
                     raise WebhookDeliveryError(
-                        f'Webhook delivery failed after {self._max_attempts} attempts.',
+                        f'Не удалось доставить webhook после {self._max_attempts} попыток.',
                     ) from None
 
                 delay = self._retry_backoff_base_seconds * (2 ** (attempt - 1))

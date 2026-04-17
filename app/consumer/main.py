@@ -88,7 +88,7 @@ async def process_new_payment(event: PaymentCreatedEventSchema) -> None:
             await service.process(event=event)
         except WebhookDeliveryError as exc:
             logger.error(
-                'Webhook delivery failed for payment_id={} idempotency_key={}: {}',
+                'Не удалось доставить webhook для payment_id={} idempotency_key={}: {}',
                 event.payment_id,
                 event.idempotency_key,
                 exc,
