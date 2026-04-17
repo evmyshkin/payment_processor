@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class LoggerSetup:
     @staticmethod
-    def serialize_extra(record: 'Record') -> str:
+    def serialize_extra(record: Record) -> str:
         """Сериализуем дополнительную информацию лога.
 
         Args:
@@ -38,7 +38,7 @@ class LoggerSetup:
         return orjson.dumps(subset).decode('utf-8')
 
     @classmethod
-    def format_logs(cls, record: 'Record') -> str:
+    def format_logs(cls, record: Record) -> str:
         """Форматирование логов для продакшена.
 
         Args:

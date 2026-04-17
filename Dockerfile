@@ -1,7 +1,7 @@
 # ===============================================
-# BASE IMAGE: Python 3.13-alpine + uv
+# BASE IMAGE: Python 3.14-alpine + uv
 # ===============================================
-FROM harbor.zxz.su/p.ghcr.io/astral-sh/uv:python3.13-alpine AS python-base
+FROM harbor.zxz.su/p.ghcr.io/astral-sh/uv:python3.14-alpine AS python-base
 
 ENV UV_PYTHON_DOWNLOADS=never \
     UV_LINK_MODE=copy \
