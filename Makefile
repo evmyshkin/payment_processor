@@ -20,5 +20,8 @@ down:
 lint:
 	uv run pre-commit run --all-files
 
-test-all:
-	pytest --cov=app --cov-branch --cov-report=term-missing
+test:
+	uv run pytest
+
+test-cov:
+	uv run pytest --cov=app --cov-branch --cov-report=term-missing
