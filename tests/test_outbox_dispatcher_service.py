@@ -7,7 +7,10 @@ from unittest.mock import Mock
 
 import pytest
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.api.v1.payments.services.outbox_dispatcher_service import OutboxDispatcherService
+from app.broker.outbox_publisher import OutboxPublishError
 from app.db.models.outbox_event import OutboxEvent
 
 
@@ -66,7 +69,7 @@ async def test_dispatch_batch_increments_attempts_on_publish_error() -> None:
     outbox_event_dao.mark_as_published = AsyncMock()
     outbox_event_dao.increment_attempts = AsyncMock()
     publisher = Mock()
-    publisher.publish = AsyncMock(side_effect=[None, RuntimeError('publish error')])
+    publisher.publish = AsyncMock(side_effect=[None, OutboxPublishError('publish error')])
     service = OutboxDispatcherService(
         session=session,
         outbox_event_dao=outbox_event_dao,
@@ -90,7 +93,7 @@ async def test_dispatch_batch_rollbacks_on_unhandled_error() -> None:
     session.commit = AsyncMock()
     session.rollback = AsyncMock()
     outbox_event_dao = Mock()
-    outbox_event_dao.list_unpublished_for_update = AsyncMock(side_effect=RuntimeError('db error'))
+    outbox_event_dao.list_unpublished_for_update = AsyncMock(side_effect=SQLAlchemyError('db error'))
     publisher = Mock()
     publisher.publish = AsyncMock()
     service = OutboxDispatcherService(
@@ -99,7 +102,7 @@ async def test_dispatch_batch_rollbacks_on_unhandled_error() -> None:
         publisher=publisher,
     )
 
-    with pytest.raises(RuntimeError, match='db error'):
+    with pytest.raises(SQLAlchemyError, match='db error'):
         await service.dispatch_batch(batch_size=100)
 
     session.rollback.assert_awaited_once()

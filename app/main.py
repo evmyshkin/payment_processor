@@ -6,9 +6,11 @@ from typing import Any
 
 import uvicorn
 
+from aiormq.exceptions import AMQPError
 from fastapi import FastAPI
 from faststream.rabbit import RabbitBroker
 from loguru import logger
+from sqlalchemy.exc import SQLAlchemyError
 from starlette_exporter import PrometheusMiddleware
 
 from app.api.error_handlers import register_exception_handlers
@@ -33,7 +35,7 @@ async def run_outbox_dispatcher_loop(
             await dispatcher.dispatch_once()
         except asyncio.CancelledError:
             raise
-        except Exception:
+        except SQLAlchemyError:
             logger.exception('Outbox dispatcher iteration failed.')
 
         await asyncio.sleep(max(poll_interval_seconds, 0.1))
@@ -72,7 +74,10 @@ async def lifespan(app: FastAPI) -> Any:
                 ),
                 name='outbox-dispatcher',
             )
-        except Exception:
+        except AMQPError:
+            logger.exception('Failed to start outbox dispatcher.')
+            broker = None
+        except OSError:
             logger.exception('Failed to start outbox dispatcher.')
             broker = None
     else:

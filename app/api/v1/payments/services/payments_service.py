@@ -2,6 +2,7 @@ import uuid
 
 from decimal import Decimal
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.payments.schemas import CreatePaymentRequestSchema
@@ -58,7 +59,7 @@ class PaymentsService:
             )
             await self._session.commit()
             await self._session.refresh(payment)
-        except Exception:
+        except SQLAlchemyError:
             await self._session.rollback()
             raise
 

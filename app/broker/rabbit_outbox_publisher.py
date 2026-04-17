@@ -1,10 +1,12 @@
 from typing import Any
 
+from aiormq.exceptions import AMQPError
 from faststream.rabbit import ExchangeType
 from faststream.rabbit import RabbitBroker
 from faststream.rabbit import RabbitExchange
 
 from app.broker.outbox_publisher import OutboxPublisher
+from app.broker.outbox_publisher import OutboxPublishError
 
 
 class RabbitOutboxPublisher(OutboxPublisher):
@@ -25,10 +27,13 @@ class RabbitOutboxPublisher(OutboxPublisher):
 
     async def publish(self, *, event_type: str, payload: dict[str, Any]) -> None:
         """Отправляет сообщение в exchange с routing key равным типу события."""
-        await self._broker.publish(
-            message=payload,
-            exchange=self._exchange,
-            routing_key=event_type,
-            persist=True,
-            message_type=event_type,
-        )
+        try:
+            await self._broker.publish(
+                message=payload,
+                exchange=self._exchange,
+                routing_key=event_type,
+                persist=True,
+                message_type=event_type,
+            )
+        except AMQPError as exc:
+            raise OutboxPublishError(f'Failed to publish outbox event "{event_type}".') from exc

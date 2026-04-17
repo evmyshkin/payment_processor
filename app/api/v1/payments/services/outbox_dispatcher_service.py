@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.broker.outbox_publisher import OutboxPublisher
+from app.broker.outbox_publisher import OutboxPublishError
 from app.db.dao.outbox_event_dao import OutboxEventDAO
 
 
@@ -45,12 +47,12 @@ class OutboxDispatcherService:
                     )
                     await self._outbox_event_dao.mark_as_published(event=event)
                     published_count += 1
-                except Exception:
+                except OutboxPublishError:
                     await self._outbox_event_dao.increment_attempts(event=event)
                     failed_count += 1
 
             await self._session.commit()
-        except Exception:
+        except SQLAlchemyError:
             await self._session.rollback()
             raise
 

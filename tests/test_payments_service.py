@@ -8,6 +8,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.api.v1.payments.schemas import CreatePaymentRequestSchema
 from app.api.v1.payments.services.exceptions import IdempotencyKeyConflictError
 from app.api.v1.payments.services.exceptions import PaymentNotFoundError
@@ -187,3 +189,36 @@ async def test_get_payment_not_found() -> None:
 
     with pytest.raises(PaymentNotFoundError):
         await service.get_payment(payment_id=payment_id)
+
+
+@pytest.mark.asyncio
+async def test_create_payment_rollbacks_on_sqlalchemy_error() -> None:
+    request = CreatePaymentRequestSchema(
+        amount=Decimal('120.00'),
+        currency=CurrencyEnum.RUB,
+        description='test payment',
+        metadata={'order_id': '42'},
+        webhook_url='https://example.com/webhook',
+    )
+    session = Mock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    session.rollback = AsyncMock()
+    payment_dao = Mock()
+    payment_dao.get_by_idempotency_key = AsyncMock(return_value=None)
+    payment_dao.create = AsyncMock(side_effect=SQLAlchemyError('db error'))
+    outbox_dao = Mock()
+    outbox_dao.create = AsyncMock()
+    service = PaymentsService(
+        session=session,
+        payment_dao=payment_dao,
+        outbox_event_dao=outbox_dao,
+    )
+
+    with pytest.raises(SQLAlchemyError, match='db error'):
+        await service.create_payment(request=request, idempotency_key='idem-42')
+
+    session.rollback.assert_awaited_once()
+    session.commit.assert_not_called()
+    session.refresh.assert_not_called()
+    outbox_dao.create.assert_not_called()
