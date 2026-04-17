@@ -25,6 +25,10 @@ class DbConfig(BaseModel):
     port: int = 5432
     name: str = ''
 
+    def is_configured(self) -> bool:
+        """Проверяет, что настройки БД заполнены для подключения."""
+        return bool(self.user and self.password and self.host and self.name)
+
 
 class AuthConfig(BaseModel):
     api_key_header_name: str = 'X-API-Key'
@@ -46,6 +50,7 @@ class RabbitConfig(BaseModel):
 
 
 class OutboxConfig(BaseModel):
+    enabled: bool = True
     batch_size: int = 100
     poll_interval_seconds: float = 1.0
 
