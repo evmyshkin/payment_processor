@@ -1,3 +1,12 @@
+x-app-image: &app-image
+  build:
+    context: .
+    target: production-image
+  image: payment_processor:latest
+  env_file:
+    - .env
+
+
 services:
   db:
     image: postgres:17
@@ -10,47 +19,110 @@ services:
       POSTGRES_PASSWORD: ${DB__PASSWORD}
       POSTGRES_DB: ${DB__NAME}
     ports:
-      - "5432:5432"
+      - '5432:5432'
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB__USER} -d ${DB__NAME}" ]
+      test: ['CMD-SHELL', 'pg_isready -U ${DB__USER} -d ${DB__NAME}']
       interval: 5s
       timeout: 3s
       retries: 20
       start_period: 5s
 
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBIT__USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT__PASSWORD:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBIT__VIRTUAL_HOST:-/}
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
   migrate:
-    image: payment_processor:latest
-    env_file:
-      - .env
+    <<: *app-image
+    command: ['/app/.venv/bin/alembic', 'upgrade', 'head']
     environment:
       DB__USER: ${DB__USER}
       DB__PASSWORD: ${DB__PASSWORD}
       DB__HOST: db
       DB__PORT: ${DB__PORT}
       DB__NAME: ${DB__NAME}
-    command: [ "/app/.venv/bin/alembic", "upgrade", "head" ]
     depends_on:
       db:
         condition: service_healthy
 
-  payment_processor:
-    build:
-      context: .
-      target: production-image
-    image: payment_processor:latest
-    env_file:
-      - .env
+  api:
+    <<: *app-image
+    command: ['/app/.venv/bin/uvicorn', 'app.main:fastapi_app', '--host', '0.0.0.0', '--port', '8000']
     environment:
       DB__USER: ${DB__USER}
       DB__PASSWORD: ${DB__PASSWORD}
       DB__HOST: db
       DB__PORT: ${DB__PORT}
       DB__NAME: ${DB__NAME}
+      AUTH__API_KEY: ${AUTH__API_KEY:-local-api-key}
+      OUTBOX__ENABLED: ${OUTBOX__ENABLED:-true}
+      RABBIT__USER: ${RABBIT__USER:-guest}
+      RABBIT__PASSWORD: ${RABBIT__PASSWORD:-guest}
+      RABBIT__HOST: rabbitmq
+      RABBIT__PORT: ${RABBIT__PORT:-5672}
+      RABBIT__VIRTUAL_HOST: ${RABBIT__VIRTUAL_HOST:-/}
+      RABBIT__EXCHANGE_NAME: ${RABBIT__EXCHANGE_NAME:-payments.events}
+      RABBIT__NEW_PAYMENTS_QUEUE_NAME: ${RABBIT__NEW_PAYMENTS_QUEUE_NAME:-payments.new}
+      RABBIT__NEW_PAYMENTS_ROUTING_KEY: ${RABBIT__NEW_PAYMENTS_ROUTING_KEY:-payments.new}
+      RABBIT__NEW_PAYMENTS_DELIVERY_LIMIT: ${RABBIT__NEW_PAYMENTS_DELIVERY_LIMIT:-3}
+      RABBIT__DEAD_LETTER_EXCHANGE_NAME: ${RABBIT__DEAD_LETTER_EXCHANGE_NAME:-payments.events.dlx}
+      RABBIT__DEAD_LETTER_QUEUE_NAME: ${RABBIT__DEAD_LETTER_QUEUE_NAME:-payments.new.dlq}
+      RABBIT__DEAD_LETTER_ROUTING_KEY: ${RABBIT__DEAD_LETTER_ROUTING_KEY:-payments.new.dlq}
     ports:
-      - "8000:8000"
+      - '8000:8000'
     depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    restart: unless-stopped
+
+  consumer:
+    <<: *app-image
+    command: ['/app/.venv/bin/faststream', 'run', 'app.consumer.main:app']
+    environment:
+      DB__USER: ${DB__USER}
+      DB__PASSWORD: ${DB__PASSWORD}
+      DB__HOST: db
+      DB__PORT: ${DB__PORT}
+      DB__NAME: ${DB__NAME}
+      RABBIT__USER: ${RABBIT__USER:-guest}
+      RABBIT__PASSWORD: ${RABBIT__PASSWORD:-guest}
+      RABBIT__HOST: rabbitmq
+      RABBIT__PORT: ${RABBIT__PORT:-5672}
+      RABBIT__VIRTUAL_HOST: ${RABBIT__VIRTUAL_HOST:-/}
+      RABBIT__EXCHANGE_NAME: ${RABBIT__EXCHANGE_NAME:-payments.events}
+      RABBIT__NEW_PAYMENTS_QUEUE_NAME: ${RABBIT__NEW_PAYMENTS_QUEUE_NAME:-payments.new}
+      RABBIT__NEW_PAYMENTS_ROUTING_KEY: ${RABBIT__NEW_PAYMENTS_ROUTING_KEY:-payments.new}
+      RABBIT__NEW_PAYMENTS_DELIVERY_LIMIT: ${RABBIT__NEW_PAYMENTS_DELIVERY_LIMIT:-3}
+      RABBIT__DEAD_LETTER_EXCHANGE_NAME: ${RABBIT__DEAD_LETTER_EXCHANGE_NAME:-payments.events.dlx}
+      RABBIT__DEAD_LETTER_QUEUE_NAME: ${RABBIT__DEAD_LETTER_QUEUE_NAME:-payments.new.dlq}
+      RABBIT__DEAD_LETTER_ROUTING_KEY: ${RABBIT__DEAD_LETTER_ROUTING_KEY:-payments.new.dlq}
+      WEBHOOK__TIMEOUT_SECONDS: ${WEBHOOK__TIMEOUT_SECONDS:-5.0}
+      WEBHOOK__MAX_ATTEMPTS: ${WEBHOOK__MAX_ATTEMPTS:-3}
+      WEBHOOK__RETRY_BACKOFF_BASE_SECONDS: ${WEBHOOK__RETRY_BACKOFF_BASE_SECONDS:-1.0}
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
 
 volumes:
   db_vol:

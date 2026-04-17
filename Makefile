@@ -1,6 +1,8 @@
 # Локальная разработка
 dev:
 	uvicorn app.main:fastapi_app --host 127.0.0.1 --port "8000" --reload
+consumer:
+	uv run faststream run app.consumer.main:app
 migrate:
 	alembic upgrade head
 migrate-down:
@@ -10,7 +12,7 @@ migrate-down:
 db:
 	docker compose up --build db -d
 up:
-	docker compose up -d
+	docker compose up --build -d
 up-stack:
 	docker compose up --build -d
 down:
