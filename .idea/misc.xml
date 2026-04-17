@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="Black">
-    <option name="sdkName" value="uv (payment_processor)" />
-  </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="uv (payment_processor)" project-jdk-type="Python SDK" />
-</project>
