@@ -43,6 +43,7 @@ class RabbitConfig(BaseModel):
     virtual_host: str = '/'
     exchange_name: str = 'payments.events'
     new_payments_queue_name: str = 'payments.new'
+    new_payments_delivery_limit: int = 3
     dead_letter_exchange_name: str = 'payments.events.dlx'
     dead_letter_queue_name: str = 'payments.new.dlq'
     new_payments_routing_key: str = 'payments.new'

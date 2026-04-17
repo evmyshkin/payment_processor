@@ -1,5 +1,6 @@
 import uuid
 
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
@@ -52,3 +53,15 @@ class PaymentDAO:
         self._session.add(payment)
         await self._session.flush()
         return payment
+
+    async def mark_processed(
+        self,
+        *,
+        payment: Payment,
+        status: PaymentStatusEnum,
+        processed_at: datetime,
+    ) -> None:
+        """Обновляет статус и дату обработки платежа."""
+        payment.status = status
+        payment.processed_at = processed_at
+        await self._session.flush()
