@@ -1,4 +1,4 @@
-# Payment Processor
+# Сервис обработки платежей
 
 Асинхронный сервис обработки платежей на FastAPI + SQLAlchemy + PostgreSQL + RabbitMQ (FastStream).
 
@@ -6,11 +6,11 @@
 
 - `POST /api/v1/payments` — создание платежа (асинхронная обработка).
 - `GET /api/v1/payments/{payment_id}` — получение текущего состояния платежа.
-- Idempotency через заголовок `Idempotency-Key`.
-- Outbox pattern для гарантированной публикации в брокер.
-- Consumer обработки платежей с webhook-уведомлениями.
-- Retry webhook (3 попытки, экспоненциальная задержка).
-- DLQ для сообщений после лимита доставок.
+- Идемпотентность через заголовок `Idempotency-Key`.
+- Паттерн outbox для гарантированной публикации в брокер.
+- Консьюмер обработки платежей с webhook-уведомлениями.
+- Повторы webhook (3 попытки, экспоненциальная задержка).
+- Очередь мертвых сообщений (DLQ) после лимита доставок.
 
 ## Требования
 
@@ -29,13 +29,13 @@ cp .env-example .env
 2. При необходимости поменять значения в `.env`.
 
 Ключевые параметры:
-- `AUTH__API_KEY` — API key для всех endpoint.
+- `AUTH__API_KEY` — API-ключ для всех эндпоинтов.
 - `DB__*` — PostgreSQL.
 - `RABBIT__*` — RabbitMQ и топология очередей.
-- `OUTBOX__*` — настройки outbox dispatcher.
-- `WEBHOOK__*` — retry/timeout webhook отправки.
+- `OUTBOX__*` — настройки диспетчера outbox.
+- `WEBHOOK__*` — настройки повторов и тайм-аутов webhook-отправки.
 
-## Запуск локально (без Docker для API/consumer)
+## Запуск локально (без Docker для API и консьюмера)
 
 1. Установить зависимости:
 
@@ -55,13 +55,13 @@ make db
 make migrate
 ```
 
-4. Запустить API:
+4. Запустить API-сервис:
 
 ```bash
 make dev
 ```
 
-5. В отдельном терминале запустить consumer:
+5. В отдельном терминале запустить консьюмер:
 
 ```bash
 make consumer
@@ -75,10 +75,10 @@ make up
 
 Поднимутся сервисы:
 - `db` (PostgreSQL)
-- `rabbitmq` (AMQP + management UI)
+- `rabbitmq` (AMQP + веб-интерфейс управления)
 - `migrate` (alembic upgrade head)
 - `api` (FastAPI)
-- `consumer` (FastStream worker)
+- `consumer` (воркер FastStream)
 
 Остановить:
 
@@ -86,7 +86,7 @@ make up
 make down
 ```
 
-RabbitMQ management UI: `http://localhost:15672`  
+Веб-интерфейс RabbitMQ: `http://localhost:15672`  
 По умолчанию: `guest/guest`.
 
 ## Примеры запросов
@@ -120,12 +120,12 @@ curl -X GET 'http://127.0.0.1:8000/api/v1/payments/<payment_id>' \
 
 ## Очереди и доставка
 
-- Основной exchange: `payments.events` (direct).
+- Основной exchange: `payments.events` (тип `direct`).
 - Основная очередь: `payments.new`.
 - DLX: `payments.events.dlx`.
 - DLQ: `payments.new.dlq`.
 - Для `payments.new` используется `x-delivery-limit` (из `RABBIT__NEW_PAYMENTS_DELIVERY_LIMIT`).
-- После превышения лимита redelivery сообщение попадает в DLQ.
+- После превышения лимита повторной доставки сообщение попадает в DLQ.
 
 ## Проверки качества
 
