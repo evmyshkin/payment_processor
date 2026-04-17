@@ -28,7 +28,7 @@ class DbConfig(BaseModel):
 
 class AuthConfig(BaseModel):
     api_key_header_name: str = 'X-API-Key'
-    api_key: str = ''
+    api_key: str = 'local-api-key'
 
 
 class RabbitConfig(BaseModel):

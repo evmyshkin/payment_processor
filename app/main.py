@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from starlette_exporter import PrometheusMiddleware
 
+from app.api.error_handlers import register_exception_handlers
 from app.api.router import router as main_router
 from app.config import config
 from app.utils.logger_setup import LoggerSetup
@@ -50,6 +51,7 @@ fastapi_app.add_middleware(
     skip_paths=config.common.disabled_log_endpoints,
 )
 
+register_exception_handlers(fastapi_app)
 fastapi_app.include_router(main_router)
 
 
