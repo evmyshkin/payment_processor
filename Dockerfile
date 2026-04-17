@@ -1,7 +1,7 @@
 # ===============================================
 # BASE IMAGE: Python 3.14-alpine + uv
 # ===============================================
-FROM harbor.zxz.su/p.ghcr.io/astral-sh/uv:python3.14-alpine AS python-base
+FROM ghcr.io/astral-sh/uv:python3.14-alpine AS python-base
 
 ENV UV_PYTHON_DOWNLOADS=never \
     UV_LINK_MODE=copy \
@@ -84,7 +84,7 @@ ENV PRODUCTION=True
 
 COPY --from=build-production-image --chown=user:user /app /app
 
-CMD ["/app/.venv/bin/uvicorn", "app.main:fastapi_app", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["/app/.venv/bin/uvicorn", "app.main:fastapi_app", "--host", "0.0.0.0", "--port", "8000"]
 
 
 # =====================================================
@@ -96,4 +96,4 @@ ENV PRODUCTION=False
 
 COPY --from=build-dev-image --chown=user:user /app /app
 
-CMD ["/app/.venv/bin/uvicorn", "app.main:fastapi_app", "--reload", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["/app/.venv/bin/uvicorn", "app.main:fastapi_app", "--reload", "--host", "0.0.0.0", "--port", "8000"]

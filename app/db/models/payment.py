@@ -20,6 +20,11 @@ from app.db.enums.currency_enum import CurrencyEnum
 from app.db.enums.payment_status_enum import PaymentStatusEnum
 
 
+def _enum_values(enum_cls: type[object]) -> list[str]:
+    """Возвращает значения enum для SQLAlchemy-хранения."""
+    return [member.value for member in enum_cls]  # type: ignore[attr-defined]
+
+
 class Payment(Base):
     """SQLAlchemy модель платежа."""
 
@@ -35,7 +40,11 @@ class Payment(Base):
         nullable=False,
     )
     currency: Mapped[CurrencyEnum] = mapped_column(
-        Enum(CurrencyEnum, name='currency_enum'),
+        Enum(
+            CurrencyEnum,
+            name='currency_enum',
+            values_callable=_enum_values,
+        ),
         nullable=False,
     )
     description: Mapped[str] = mapped_column(
@@ -49,7 +58,11 @@ class Payment(Base):
         default=dict,
     )
     status: Mapped[PaymentStatusEnum] = mapped_column(
-        Enum(PaymentStatusEnum, name='payment_status_enum'),
+        Enum(
+            PaymentStatusEnum,
+            name='payment_status_enum',
+            values_callable=_enum_values,
+        ),
         nullable=False,
         default=PaymentStatusEnum.PENDING,
     )

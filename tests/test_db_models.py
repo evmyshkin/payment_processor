@@ -39,6 +39,12 @@ def test_payment_model_columns() -> None:
     assert columns['processed_at'].nullable
 
 
+def test_payment_model_uses_enum_values_for_status() -> None:
+    status_type = Payment.__table__.c.status.type
+
+    assert status_type.enums == ['pending', 'succeeded', 'failed']
+
+
 def test_outbox_model_columns() -> None:
     columns = OutboxEvent.__table__.c
 
