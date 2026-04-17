@@ -15,6 +15,18 @@ if TYPE_CHECKING:
     from loguru import Record
 
 
+class InterceptHandler(logging.Handler):
+    """Переадресует stdlib-логи в loguru."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Отправляет запись stdlib-логгера в loguru."""
+        level_name = record.levelname
+        if level_name.startswith('Level '):
+            level_name = logging.getLevelName(record.levelno)
+
+        logger.opt(exception=record.exc_info).log(level_name, record.getMessage())
+
+
 class LoggerSetup:
     @staticmethod
     def serialize_extra(record: Record) -> str:
@@ -56,10 +68,18 @@ class LoggerSetup:
         return '{extra[serialized]}\n'
 
     @staticmethod
-    def disable_uvicorn_logging() -> None:
-        """Отключает стандартные логеры Uvicorn."""
-        logging.getLogger('uvicorn.access').handlers = []
-        logging.getLogger('uvicorn.error').handlers = []
+    def configure_stdlib_logging() -> None:
+        """Переопределяет stdlib-логгеры на loguru sink."""
+        handler = InterceptHandler()
+        root_logger = logging.getLogger()
+        root_logger.handlers = [handler]
+        root_logger.setLevel(config.common.log_level.value)
+
+        for logger_name in ('uvicorn', 'uvicorn.error', 'uvicorn.access', 'fastapi'):
+            target_logger = logging.getLogger(logger_name)
+            target_logger.handlers = [handler]
+            target_logger.propagate = False
+            target_logger.setLevel(config.common.log_level.value)
 
     @classmethod
     def configure_logging(cls) -> None:
@@ -67,4 +87,4 @@ class LoggerSetup:
 
         logger.remove()
         logger.add(sys.stdout, format=cls.format_logs, level=config.common.log_level.value)
-        # cls.disable_uvicorn_logging()
+        cls.configure_stdlib_logging()

@@ -19,6 +19,8 @@ from app.config import config
 from app.db.session import get_session_maker
 from app.utils.logger_setup import LoggerSetup
 
+LoggerSetup.configure_logging()
+
 
 async def run_outbox_dispatcher_loop(
     *,
@@ -48,9 +50,6 @@ async def lifespan(app: FastAPI) -> Any:
         None: Контекст менеджер для жизненного цикла приложения
         :type app: FastAPI
     """
-    # Запуск логгера
-    LoggerSetup.configure_logging()
-
     broker: RabbitBroker | None = None
     outbox_task: asyncio.Task[None] | None = None
     if config.outbox.enabled and config.db.is_configured():
